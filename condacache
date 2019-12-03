@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ $# -ne 2 ]]; then
+  echo ""
+  echo "CondaCache -- The caching conda environment installer."
+  echo "Usage:"
+  echo ""
+  echo "  $0 <environment file> <venv directory>"
+  exit 1
+fi
+
+conda=$(command -v conda || true)
+
+if [[ ! -x "$conda" ]]; then
+  echo "Can't find conda on your path! Exiting..."
+  exit 2
+fi
+
+env_file=$1
+target_dir=$2
+CONDACACHE_DIR=${CONDACACHE_DIR:-"$(dirname "${target_dir}")/.condacache"}
+env_sum=( $(md5sum "${env_file}") )
+cache_target="${CONDACACHE_DIR}/${env_sum[0]}"
+
+mkdir -p "${CONDACACHE_DIR}"
+
+if [[ ! -e ${cache_target} ]]; then
+  ${conda} env create --quiet -p "${cache_target}" -f "${env_file}"
+  ${conda} env export -p "${cache_target}" | head -n -2 > "${cache_target}/environment.yaml"
+fi
+
+if ! diff "${cache_target}/environment.yaml" "${env_file}"; then
+  #rm -rf ${cache_target}
+  echo "Environment file ${env_file} does not match cached environment, as checked by 'conda env export' (Is it underspecified?)"
+  exit 4
+fi
+
+ln -sfT "${cache_target}" "${target_dir}"
