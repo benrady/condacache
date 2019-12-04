@@ -13,8 +13,10 @@ Usage:
 
 CondaCache can be configured with the following environment variables:
 
-  `CONDACACHE_REPO_URL` - HTTP PUT compatible service for storing tarballs
+```
+  CONDACACHE_REPO_URL - HTTP PUT compatible service for storing tarballs
     ex: 'https://artifactory.example.com/artifactory/condacache'
 
-  `CONDACACHE_AUTH` (optional) - HTTP header used for auth when uploading to the REPO URL
+  CONDACACHE_AUTH (optional) - HTTP header used for auth when uploading to the REPO URL
     ex: 'Authorization: Bearer <token>'"
+```
