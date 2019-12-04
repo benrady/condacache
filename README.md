@@ -11,5 +11,10 @@ Usage:
 
 ## Configuration
 
-By default, condacache will write to a cache directory named `.condacache` as a peer of your venv directory. You can configure this by setting the `CONDACACHE_DIR` environment variable
+CondaCache can be configured with the following environment variables:
 
+  `CONDACACHE_REPO_URL` - HTTP PUT compatible service for storing tarballs
+    ex: 'https://artifactory.example.com/artifactory/condacache'
+
+  `CONDACACHE_AUTH` (optional) - HTTP header used for auth when uploading to the REPO URL
+    ex: 'Authorization: Bearer <token>'"
