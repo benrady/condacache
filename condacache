@@ -33,7 +33,7 @@ env_sum="${sum_output[0]}"
 tarball="${env_sum}.tar.gz"
 
 function is_cached() {
-  curl -sLf -I "${CONDACACHE_REPO_URL}/$tarball"
+  curl -sLf -I "${CONDACACHE_REPO_URL}/$tarball" > /dev/null
 }
 
 function check_environment() {
