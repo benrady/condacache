@@ -61,7 +61,7 @@ function fetch_environment() {
   curl -sL "${CONDACACHE_REPO_URL}/$tarball" | tar -zx -C "${target_dir}"
 }
 
-if is_cached "${env_sum}"; then
+if is_cached; then
   fetch_environment
 else
   ${conda} env create --quiet -p "${target_dir}" -f "${env_file}"
