@@ -13,8 +13,8 @@ if [[ $# -ne 2 ]]; then
   echo "  CONDACACHE_REPO_URL - HTTP PUT compatible service for storing tarballs"
   echo "    ex: 'https://artifactory.example.com/artifactory/condacache'"
   echo ""
-  echo "  CONDACACHE_AUTH (optional) - HTTP header used for auth when uploading to the REPO URL"
-  echo "    ex: 'Authorization: Bearer <token>'"
+  echo "  CONDACACHE_AUTH (optional) - The username:password used for auth when uploading to the REPO URL"
+  echo "    ex: 'alice:my_password'"
   exit 1
 fi
 
@@ -50,7 +50,7 @@ function cache_environment() {
   else
     echo "Creating tarball..."
     tar -C "${target_dir}" -zcf "${tarball}" .
-    curl -XPUT -H "${CONDACACHE_AUTH}" -T "${tarball}" "${CONDACACHE_REPO_URL}/$tarball"
+    curl -XPUT -u "${CONDACACHE_AUTH}" -T "${tarball}" "${CONDACACHE_REPO_URL}/$tarball"
     rm "${tarball}"
   fi
 }
