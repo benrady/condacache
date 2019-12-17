@@ -70,6 +70,7 @@ function fetch_environment() {
   mkdir -p "${target_dir}"
   echo "Unpacking ${CONDACACHE_REPO_URL}/${tarball} to ${target_dir}"
   curl -sL "${CONDACACHE_REPO_URL}/$tarball" | tar -zx -C "${target_dir}"
+  ${target_dir}/bin/conda-unpack
 }
 
 if is_cached; then
