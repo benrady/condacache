@@ -7,7 +7,7 @@ if [[ $# -ne 2 ]]; then
   echo "CondaCache -- The caching conda environment installer."
   echo "Usage:"
   echo ""
-  echo "  $0 <environment file> <venv directory>"
+  echo "  $ condacache <environment file> <venv directory>"
   echo ""
   echo "Can be configured with the following environment variables:"
   echo "  CONDACACHE_REPO_URL - HTTP PUT compatible service for storing tarballs"
@@ -20,6 +20,7 @@ fi
 
 conda=$(command -v conda || true)
 CONDACACHE_AUTH=${CONDACACHE_AUTH:-""}
+CONDACACHE_REPO_URL=${CONDACACHE_REPO_URL:-""}
 
 if [[ ! -x "$conda" ]]; then
   echo "Exiting! Can't find conda on your PATH: $PATH"
@@ -33,7 +34,13 @@ env_sum="${sum_output[0]}"
 tarball="${env_sum}.tar.gz"
 
 function is_cached() {
-  curl -sLf -I "${CONDACACHE_REPO_URL}/$tarball" > /dev/null
+  if [[ -n "${CONDACACHE_REPO_URL}" ]]; then
+    curl -sLf -I "${CONDACACHE_REPO_URL}/$tarball" > /dev/null
+    return $?
+  else
+    echo "CONDACACHE_REPO_URL variable not set. Skipping download."
+    return 1
+  fi
 }
 
 function check_environment() {
@@ -48,8 +55,12 @@ function cache_environment() {
   if [[ -z "${CONDACACHE_AUTH}" ]]; then
     echo "CONDACACHE_AUTH variable not set. Skipping upload."
   else
+    if ! ${conda} pack --help > /dev/null; then
+      echo "Conda-pack is not installed. Let me do that for you."
+      ${conda} install -y -c conda-forge conda-pack
+    fi
     echo "Creating tarball..."
-    tar -C "${target_dir}" -zcf "${tarball}" .
+    ${conda} pack -p "${target_dir}" -o "${tarball}"
     curl -XPUT -u "${CONDACACHE_AUTH}" -T "${tarball}" "${CONDACACHE_REPO_URL}/$tarball"
     rm "${tarball}"
   fi
