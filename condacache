@@ -51,14 +51,18 @@ function check_environment() {
   fi
 }
 
+function ensure_conda_pack() {
+  if ! ${conda} pack --help > /dev/null; then
+    echo "Conda-pack is not installed. Let me do that for you."
+    ${conda} install -y -c conda-forge conda-pack
+  fi
+}
+
 function cache_environment() {
   if [[ -z "${CONDACACHE_AUTH}" ]]; then
     echo "CONDACACHE_AUTH variable not set. Skipping upload."
   else
-    if ! ${conda} pack --help > /dev/null; then
-      echo "Conda-pack is not installed. Let me do that for you."
-      ${conda} install -y -c conda-forge conda-pack
-    fi
+    ensure_conda_pack
     echo "Creating tarball..."
     ${conda} pack -p "${target_dir}" -o "${tarball}"
     curl -XPUT -u "${CONDACACHE_AUTH}" -T "${tarball}" "${CONDACACHE_REPO_URL}/$tarball"
@@ -70,6 +74,7 @@ function fetch_environment() {
   mkdir -p "${target_dir}"
   echo "Unpacking ${CONDACACHE_REPO_URL}/${tarball} to ${target_dir}"
   curl -sL "${CONDACACHE_REPO_URL}/$tarball" | tar -zx -C "${target_dir}"
+  ensure_conda_pack
   ${target_dir}/bin/conda-unpack
 }
 
