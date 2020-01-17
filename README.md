@@ -1,7 +1,7 @@
 
 # CondaCache
 
-An alternative to `conda env create` that caches environments that have already been installed
+An alternative to `conda env create` that caches environments using conda pack that have already been installed
 
 ```
 Usage:
