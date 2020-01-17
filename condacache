@@ -2,12 +2,26 @@
 
 set -euo pipefail
 
-if [[ $# -ne 2 ]]; then
+conda=$(command -v conda || true)
+CONDACACHE_AUTH=${CONDACACHE_AUTH:-""}
+CONDACACHE_REPO_URL=${CONDACACHE_REPO_URL:-""}
+no_unpack=false
+
+if [[ ! -x "$conda" ]]; then
+  echo "Exiting! Can't find conda on your PATH: $PATH"
+  exit 2
+fi
+
+function help() {
   echo ""
   echo "CondaCache -- The caching conda environment installer."
   echo "Usage:"
   echo ""
-  echo "  $ condacache <environment file> <venv directory>"
+  echo "  $ condacache [OPTIONS] <environment file> <venv directory>"
+  echo ""
+  echo "Options:"
+  echo ""
+  echo " -n, --no-unpack -- Do not automatically call 'conda-unpack' after expanding a cached environment"
   echo ""
   echo "Can be configured with the following environment variables:"
   echo "  CONDACACHE_REPO_URL - HTTP PUT compatible service for storing tarballs"
@@ -15,23 +29,7 @@ if [[ $# -ne 2 ]]; then
   echo ""
   echo "  CONDACACHE_AUTH (optional) - The username:password used for auth when uploading to the REPO URL"
   echo "    ex: 'alice:my_password'"
-  exit 1
-fi
-
-conda=$(command -v conda || true)
-CONDACACHE_AUTH=${CONDACACHE_AUTH:-""}
-CONDACACHE_REPO_URL=${CONDACACHE_REPO_URL:-""}
-
-if [[ ! -x "$conda" ]]; then
-  echo "Exiting! Can't find conda on your PATH: $PATH"
-  exit 2
-fi
-
-env_file=$1
-target_dir=$2
-sum_output=( $(md5sum "${env_file}") )
-env_sum="${sum_output[0]}"
-tarball="${env_sum}.tar.gz"
+}
 
 function is_cached() {
   if [[ -n "${CONDACACHE_REPO_URL}" ]]; then
@@ -58,16 +56,21 @@ function ensure_conda_pack() {
   fi
 }
 
+function pack_tarball() {
+  rm "$tarball"
+  ${conda} pack -p "${target_dir}" -o "${tarball}"
+}
+
 function cache_environment() {
   if [[ -z "${CONDACACHE_AUTH}" ]]; then
     echo "CONDACACHE_AUTH variable not set. Skipping upload."
   else
     check_environment
-    ensure_conda_pack
-    echo "Creating tarball..."
-    ${conda} pack -p "${target_dir}" -o "${tarball}"
+    if [[ ! -e $tarball ]]; then
+      echo "Creating tarball..."
+      pack_tarball
+    fi
     curl -XPUT -u "${CONDACACHE_AUTH}" -T "${tarball}" "${CONDACACHE_REPO_URL}/$tarball"
-    rm "${tarball}"
   fi
 }
 
@@ -76,14 +79,53 @@ function fetch_environment() {
   echo "Unpacking ${CONDACACHE_REPO_URL}/${tarball} to ${target_dir}"
   curl -sL "${CONDACACHE_REPO_URL}/$tarball" | tar -zx -C "${target_dir}"
   ensure_conda_pack
-  ${target_dir}/bin/conda-unpack
+  if [[ $no_unpack == "true" ]]; then
+    echo "Not calling conda-unpack on this environment"
+  else
+    "${target_dir}/bin/conda-unpack"
+  fi
 }
+
+if [[ $# -eq 0 ]]; then
+  help
+  exit 1
+fi
+
+while [ "$1" != "" ]; do
+  case $1 in
+    -n | --no-unpack )      shift
+      no_unpack=true
+      ;;
+    -h | --help )           help
+      exit 0
+      ;;
+    * )                     break;
+  esac
+done
+
+env_file=$1
+target_dir=$2
+sum_output=( $(md5sum "${env_file}") )
+env_sum="${sum_output[0]}"
+writeable_dir="$(dirname "$target_dir")"
+tarball="$writeable_dir/${env_sum}.tar.gz"
 
 if is_cached; then
   fetch_environment
 else
   ${conda} env create --quiet -p "${target_dir}" -f "${env_file}"
+  if [[ $no_unpack == "true" ]];then
+    ensure_conda_pack
+    echo "Creating packed environment..."
+    pack_tarball
+    rm -rf "${target_dir}"
+    mkdir -p "${target_dir}"
+    tar -C "${target_dir}" -zxf "${tarball}"
+  fi
   cache_environment
+  if [[ -e ${tarball} ]]; then
+    rm "${tarball}"
+  fi
 fi
 
 echo "${env_file} installed into ${target_dir}"
