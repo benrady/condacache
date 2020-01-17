@@ -57,7 +57,7 @@ function ensure_conda_pack() {
 }
 
 function pack_tarball() {
-  rm "$tarball"
+  rm -f "$tarball"
   ${conda} pack -p "${target_dir}" -o "${tarball}"
 }
 
